@@ -103,8 +103,8 @@ git push -u origin main
 推送符合 `vX.Y.Z` 格式的 tag 会触发 [GitHub Actions 发布工作流](.github/workflows/release.yml)：
 
 ```sh
-git tag -a v1.0.0 -m "Release v1.0.0"
-git push origin v1.0.0
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
 ```
 
 工作流会自动运行主机测试、安装固定版本的 Android NDK、同步 `module.prop` 版本、编译模块、生成 SHA-256 校验文件并创建 GitHub Release。
