@@ -35,11 +35,16 @@ jobs:
       - name: Run host tests
         run: make host-test
 
-      - name: Install Android NDK
+      - name: Set up Android SDK and NDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: ndk;${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Configure Android NDK path
         shell: bash
         run: |
-          sdkmanager --install "ndk;${ANDROID_NDK_VERSION}"
-          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:?Android SDK path is not set}}"
+          echo "ANDROID_NDK_HOME=${sdk_root}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
 
       - name: Set module version
         run: ./scripts/set-module-version.sh "$GITHUB_REF_NAME"
