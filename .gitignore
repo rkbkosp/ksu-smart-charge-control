@@ -1,0 +1,20 @@
+# Build and release outputs
+/build/
+/dist/
+/charge-policy/bin/charged
+/tests/test_charged
+/tests/test_charged.dSYM/
+*.o
+*.a
+*.so
+*.zip
+
+# Local agent state
+/.pi/
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

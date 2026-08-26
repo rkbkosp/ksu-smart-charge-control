@@ -1,0 +1,6 @@
+id=charge-policy
+name=KSU Smart Charge Control
+version=1.0.0
+versionCode=10000
+author=KSU Smart Charge Control contributors
+description=Event-driven native charging policy for PJE110

@@ -1,0 +1,88 @@
+name: Build and release KernelSU module
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ANDROID_NDK_VERSION: "28.2.13676358"
+
+jobs:
+  release:
+    name: Test, build and release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate release tag
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "Tag must use the vMAJOR.MINOR.PATCH format" >&2
+            exit 2
+          fi
+
+      - name: Run host tests
+        run: make host-test
+
+      - name: Install Android NDK
+        shell: bash
+        run: |
+          sdkmanager --install "ndk;${ANDROID_NDK_VERSION}"
+          echo "ANDROID_NDK_HOME=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Set module version
+        run: ./scripts/set-module-version.sh "$GITHUB_REF_NAME"
+
+      - name: Build Android binary
+        run: ./scripts/build-android.sh
+
+      - name: Package module
+        id: package
+        shell: bash
+        run: |
+          ./scripts/package.sh
+          asset="dist/ksu-smart-charge-control-${GITHUB_REF_NAME}.zip"
+          mv dist/charge-policy.zip "$asset"
+          (
+            cd dist
+            sha256sum "$(basename "$asset")" > "$(basename "$asset").sha256"
+          )
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"
+          echo "checksum=${asset}.sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ksu-smart-charge-control-${{ github.ref_name }}
+          path: |
+            ${{ steps.package.outputs.asset }}
+            ${{ steps.package.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ASSET: ${{ steps.package.outputs.asset }}
+          CHECKSUM: ${{ steps.package.outputs.checksum }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" "$ASSET" "$CHECKSUM" --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" "$ASSET" "$CHECKSUM" \
+              --verify-tag \
+              --generate-notes \
+              --title "KSU Smart Charge Control ${GITHUB_REF_NAME}"
+          fi
